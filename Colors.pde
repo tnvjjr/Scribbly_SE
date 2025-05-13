@@ -11,7 +11,7 @@ class Colors {
       #fbf236, #d95763, #d77bba, #76428a, #ac3232, #8a6f30,
       #ffffff
     };
-    penColor = color(128, 128, 128);
+    penColor = color(0); // Start with black
   }
   
   void setPenColor(int r, int g, int b) {

@@ -18,8 +18,8 @@ class Canvas {
   }
   
   void draw() {
+    canvas.beginDraw();
     if (mousePressed && mouseY > 0) {
-      canvas.beginDraw();
       if (isEraserActive) {
         canvas.noStroke();
         canvas.fill(255);
@@ -29,8 +29,8 @@ class Canvas {
         canvas.strokeWeight(strokeSize);
         canvas.line(pmouseX, pmouseY, mouseX, mouseY);
       }
-      canvas.endDraw();
     }
+    canvas.endDraw();
     
     image(canvas, 0, 0);
     

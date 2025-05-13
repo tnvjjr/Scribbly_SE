@@ -5,11 +5,14 @@ void setup() {
   size(600, 600);
   canvas = new Canvas(600, 600);
   createGUI();
+  surface.setTitle("Paint");
 }
 
 void draw() {
-  canvas.setStrokeSize(penSizeSlider.getValueI());
-  canvas.draw();
+  if (canvas != null && penSizeSlider != null) {
+    canvas.setStrokeSize(penSizeSlider.getValueI());
+    canvas.draw();
+  }
 }
 
 void keyPressed() {

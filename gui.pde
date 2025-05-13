@@ -1,26 +1,13 @@
 GWindow controlsWindow;
-color[] paletteColors;
 GSlider redSlider, greenSlider, blueSlider, penSizeSlider;
 GButton setColorButton;
 GButton eraserButton;
 GSlider eraserSizeSlider;
-color penColor;
-int eraserStrokeSize = 20;
-boolean isEraserActive = false;
 
 public void createGUI() {
   controlsWindow = GWindow.getWindow(this, "Paint Controls", 0, 0, 360, 380, JAVA2D);
   controlsWindow.setActionOnClose(G4P.KEEP_OPEN);
   controlsWindow.addDrawHandler(this, "drawControlsWindow");
-
-  paletteColors = new color[] {
-    #000000, #222034, #323c39, #3f3f74, #306082, #5b6ee1, #639bff, #5fcde4,
-    #4b692f, #37946e, #6abe30, #99e550, #8f974a,
-    #595652, #696a6a, #847e87, #9badb7, #cbdbfc,
-    #663931, #45283c, #8f563b, #df7126, #d9a066, #eec39a,
-    #fbf236, #d95763, #d77bba, #76428a, #ac3232, #8a6f30,
-    #ffffff
-  };
 
   GLabel penSizeLabel = new GLabel(controlsWindow, 10, 215, 100, 20);
   penSizeLabel.setText("Pen Size:");
@@ -99,8 +86,6 @@ public void createGUI() {
   eraserButton = new GButton(controlsWindow, 220, 320, 120, 30);
   eraserButton.setText("Eraser");
   eraserButton.addEventHandler(this, "handleEraser");
-
-  penColor = color(128, 128, 128);
 }
 
 synchronized public void drawControlsWindow(PApplet appc, GWinData data) {
@@ -115,6 +100,8 @@ synchronized public void drawControlsWindow(PApplet appc, GWinData data) {
 
   int buttonX = startX;
   int buttonY = startY;
+  
+  color[] paletteColors = canvas.getColors().getPaletteColors();
 
   for (int i = 0; i < paletteColors.length; i++) {
     appc.fill(paletteColors[i]);
@@ -132,9 +119,7 @@ synchronized public void drawControlsWindow(PApplet appc, GWinData data) {
     int x = (appc.mouseX - startX) / (buttonSize + padding);
     int y = (appc.mouseY - startY) / (buttonSize + padding);
     int index = y * cols + x;
-    if (index >= 0 && index < paletteColors.length) {
-      penColor = paletteColors[index];
-    }
+    canvas.getColors().setPenColorFromPalette(index);
   }
 
   int r = redSlider.getValueI();
@@ -149,30 +134,22 @@ synchronized public void drawControlsWindow(PApplet appc, GWinData data) {
   appc.fill(0);
   appc.text("Preview", 255, 235);
 
-  if (isEraserActive) {
-    eraserStrokeSize = eraserSizeSlider.getValueI();
-    appc.noStroke();
-    appc.fill(230);
-    if (appc.mousePressed) {
-      appc.ellipse(appc.mouseX, appc.mouseY, eraserStrokeSize, eraserStrokeSize);
-    }
-  }
+  canvas.setEraserSize(eraserSizeSlider.getValueI());
 }
 
 public void handleSetPenColor(GButton button, GEvent event) {
-  if (button == setColorButton) {
-    penColor = color(redSlider.getValueI(), greenSlider.getValueI(), blueSlider.getValueI());
-    isEraserActive = false;
+  if (button == setColorButton && event == GEvent.CLICKED) {
+    canvas.getColors().setPenColor(
+      redSlider.getValueI(),
+      greenSlider.getValueI(),
+      blueSlider.getValueI()
+    );
+    canvas.setEraserActive(false);
   }
 }
 
 public void handleEraser(GButton button, GEvent event) {
-  if (button == eraserButton) {
-    isEraserActive = true;
-    penColor = color(255, 255, 255);
+  if (button == eraserButton && event == GEvent.CLICKED) {
+    canvas.setEraserActive(true);
   }
-}
-
-public int getEraserSize() {
-  return eraserSizeSlider.getValueI();
 }

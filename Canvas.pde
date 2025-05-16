@@ -65,6 +65,19 @@ class Canvas {
     canvas.endDraw();
   }
   
+  void save(String filename) {
+    File dir = new File(sketchPath("") + "/screenshots");
+    if (!dir.exists()) {
+      dir.mkdir();
+    }
+    
+    String timestamp = year() + "-" + nf(month(), 2) + "-" + nf(day(), 2) + "_" + nf(hour(), 2) + "-" + nf(minute(), 2) + "-" + nf(second(), 2);
+    
+    String filepath = "screenshots/" + (filename != null ? filename : "drawing_") + timestamp + ".png";
+    canvas.save(filepath);
+    println("Canvas saved as: " + filepath);
+  }
+  
   void setEraserActive(boolean active) {
     isEraserActive = active;
   }

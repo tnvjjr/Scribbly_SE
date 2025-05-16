@@ -2,10 +2,11 @@ GWindow controlsWindow;
 GSlider redSlider, greenSlider, blueSlider, penSizeSlider;
 GButton setColorButton;
 GButton eraserButton;
+GButton saveButton;
 GSlider eraserSizeSlider;
 
 public void createGUI() {
-  controlsWindow = GWindow.getWindow(this, "Paint Controls", 0, 0, 360, 380, JAVA2D);
+  controlsWindow = GWindow.getWindow(this, "Paint Controls", 0, 0, 360, 400, JAVA2D);
   controlsWindow.setActionOnClose(G4P.KEEP_OPEN);
   controlsWindow.addDrawHandler(this, "drawControlsWindow");
 
@@ -86,6 +87,11 @@ public void createGUI() {
   eraserButton = new GButton(controlsWindow, 220, 320, 120, 30);
   eraserButton.setText("Eraser");
   eraserButton.addEventHandler(this, "handleEraser");
+  
+  // Add Save Canvas button
+  saveButton = new GButton(controlsWindow, 220, 360, 120, 30);
+  saveButton.setText("Save Canvas");
+  saveButton.addEventHandler(this, "handleSaveCanvas");
 }
 
 synchronized public void drawControlsWindow(PApplet appc, GWinData data) {
@@ -151,5 +157,11 @@ public void handleSetPenColor(GButton button, GEvent event) {
 public void handleEraser(GButton button, GEvent event) {
   if (button == eraserButton && event == GEvent.CLICKED) {
     canvas.setEraserActive(true);
+  }
+}
+
+public void handleSaveCanvas(GButton button, GEvent event) {
+  if (button == saveButton && event == GEvent.CLICKED) {
+    canvas.save(null);
   }
 }

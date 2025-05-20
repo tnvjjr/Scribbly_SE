@@ -1,6 +1,7 @@
 class Shape {
   PVector coords;
-  PVector coord2, coord3;
+  PVector coord2;
+  PVector coord3;
   color rgb;
   float borderWidth;
   color borderColor;
@@ -14,6 +15,18 @@ class Shape {
     this.borderWidth = bw;
     this.borderColor = bc;
     this.type = type;
+    
+    // Initialize shape-specific properties
+    if (type.equals("Circle")) {
+      this.radius = 0;  // Will be set by adjustVertex
+    } else if (type.equals("Rectangle")) {
+      this.width = 0;   // Will be set by adjustVertex
+      this.height = 0;
+    } else if (type.equals("Triangle")) {
+      // Initialize all vertices to start point, will be adjusted later
+      this.coord2 = coords.copy();
+      this.coord3 = coords.copy();
+    }
   }
 
   void setRadius(float r) {
@@ -33,68 +46,200 @@ class Shape {
   void draw(PGraphics pg) {
     PGraphics target = (pg != null) ? pg : g;
     target.pushStyle();
+    target.smooth(8);  // Increased anti-aliasing
+    target.hint(ENABLE_STROKE_PURE);  // Enable better stroke rendering
+    target.strokeJoin(ROUND);  // Smooth corners
+    target.strokeCap(ROUND);   // Smooth line endings
     target.stroke(borderColor);
     target.strokeWeight(borderWidth);
     target.fill(rgb);
 
-    switch (type) {
-      case "Circle":
-        target.ellipse(coords.x, coords.y, radius * 2, radius * 2);
-        break;
-      case "Rectangle":
-        target.rect(coords.x, coords.y, width, height);
-        break;
-      case "Triangle":
-        target.triangle(coords.x, coords.y, coord2.x, coord2.y, coord3.x, coord3.y);
-        break;
+    if (type.equals("Circle")) {
+      target.ellipseMode(CENTER);
+      target.ellipse(coords.x, coords.y, radius * 2, radius * 2);
+    } 
+    if (type.equals("Rectangle")) {
+      target.rectMode(CORNERS);  // Changed to CORNERS mode for more precise control
+      // Calculate actual corners based on width and height
+      float x2 = coords.x + width;
+      float y2 = coords.y + height;
+      // Draw the rectangle using refined coordinates
+      target.rect(coords.x, coords.y, x2, y2);
+    } 
+    if (type.equals("Triangle")) {
+      target.beginShape();
+      target.vertex(coords.x, coords.y);
+      target.vertex(coord2.x, coord2.y);
+      target.vertex(coord3.x, coord3.y);
+      target.endShape(CLOSE);
     }
 
     target.popStyle();
   }
 
   boolean contains(float x, float y) {
+    PVector mouse = new PVector(x, y);
+    float buffer = 10;  // Distance for hit detection
+    
     if (type.equals("Circle")) {
-      return PVector.dist(coords, new PVector(x, y)) <= radius;
+      float dist = PVector.dist(coords, mouse);
+      // Check if point is near the circumference or center
+      return dist <= radius + buffer || dist <= buffer;
     } 
     else if (type.equals("Rectangle")) {
-      return x >= coords.x && x <= coords.x + width && y >= coords.y && y <= coords.y + height;
+      // Check if point is near any edge or corner
+      float left = coords.x;
+      float right = coords.x + width;
+      float top = coords.y;
+      float bottom = coords.y + height;
+      
+      boolean nearHorizEdge = (x >= left - buffer && x <= right + buffer) &&
+                            (abs(y - top) <= buffer || abs(y - bottom) <= buffer);
+      boolean nearVertEdge = (y >= top - buffer && y <= bottom + buffer) &&
+                           (abs(x - left) <= buffer || abs(x - right) <= buffer);
+      
+      return nearHorizEdge || nearVertEdge;
     } 
     else if (type.equals("Triangle")) {
-      return (PVector.dist(coord2, new PVector(x, y)) < 10) || 
-             (PVector.dist(coord3, new PVector(x, y)) < 10);
+      // Check if point is near any vertex or edge
+      boolean nearVertex = PVector.dist(coords, mouse) < buffer ||
+                         PVector.dist(coord2, mouse) < buffer || 
+                         PVector.dist(coord3, mouse) < buffer;
+                         
+      // Check if point is near any edge using point-to-line distance
+      float d1 = pointToLineDistance(mouse, coords, coord2);
+      float d2 = pointToLineDistance(mouse, coord2, coord3);
+      float d3 = pointToLineDistance(mouse, coord3, coords);
+      
+      return nearVertex || d1 <= buffer || d2 <= buffer || d3 <= buffer;
     }
     return false;
   }
+  
+  // Helper function to calculate point-to-line distance
+  private float pointToLineDistance(PVector p, PVector a, PVector b) {
+    float numerator = abs((b.y - a.y) * p.x - (b.x - a.x) * p.y + b.x * a.y - b.y * a.x);
+    float denominator = PVector.dist(a, b);
+    return numerator / denominator;
+  }
 
   int getVertexIndex(float x, float y) {
+    PVector mouse = new PVector(x, y);
+    float buffer = 10;
+    
     if (type.equals("Circle")) {
-      if (PVector.dist(new PVector(coords.x + radius, coords.y), new PVector(x, y)) < 10) {
+      // Radius control point
+      if (PVector.dist(new PVector(coords.x + radius, coords.y), mouse) < buffer) {
         return 0;
+      }
+      // Center point
+      if (PVector.dist(coords, mouse) < buffer) {
+        return 1;
       }
     } 
     else if (type.equals("Rectangle")) {
-      if (PVector.dist(new PVector(coords.x + width, coords.y + height), new PVector(x, y)) < 10) {
+      // Corner resize handle
+      if (PVector.dist(new PVector(coords.x + width, coords.y + height), mouse) < buffer) {
         return 0;
+      }
+      // Origin point for moving
+      if (PVector.dist(coords, mouse) < buffer) {
+        return 1;
       }
     } 
     else if (type.equals("Triangle")) {
-      if (PVector.dist(coord2, new PVector(x, y)) < 10) return 1;
-      if (PVector.dist(coord3, new PVector(x, y)) < 10) return 2;
+      // Check vertices in reverse order (top layer first)
+      if (PVector.dist(coord3, mouse) < buffer) return 2;
+      if (PVector.dist(coord2, mouse) < buffer) return 1;
+      if (PVector.dist(coords, mouse) < buffer) return 0;
     }
     return -1;
   }
 
   void adjustVertex(int index, float x, float y) {
-    if (type.equals("Circle") && index == 0) {
-      radius = max(5, PVector.dist(coords, new PVector(x, y)));
+    PVector mouse = new PVector(x, y);
+    
+    if (type.equals("Circle")) {
+      if (index == 0) {
+        // Use distance from center to mouse for radius, ensure minimum size
+        radius = max(5, PVector.dist(coords, mouse));
+      } else if (index == 1) {
+        // Move the entire circle
+        coords.x = x;
+        coords.y = y;
+      }
     } 
-    else if (type.equals("Rectangle") && index == 0) {
-      width = max(5, x - coords.x);
-      height = max(5, y - coords.y);
+    else if (type.equals("Rectangle")) {
+      if (index == 0) {
+        // For resizing from corner
+        PVector dragPoint = new PVector(x, y);
+        PVector initialPoint = new PVector(coords.x, coords.y);
+        
+        // Calculate width and height based on drag direction
+        width = abs(dragPoint.x - initialPoint.x);
+        height = abs(dragPoint.y - initialPoint.y);
+        
+        // Enforce minimum size
+        width = max(5, width);
+        height = max(5, height);
+        
+        // Update position based on drag direction
+        coords.x = min(dragPoint.x, initialPoint.x);
+        coords.y = min(dragPoint.y, initialPoint.y);
+      } else if (index == 1) {
+        // Move the entire rectangle by its origin point
+        coords.x = x;
+        coords.y = y;
+      }
+    }
+    else if (type.equals("Triangle")) {
+      if (index == 0) {
+        // Move the entire triangle while maintaining its shape
+        float dx = x - coords.x;
+        float dy = y - coords.y;
+        coords.x = x;
+        coords.y = y;
+        coord2.add(dx, dy);
+        coord3.add(dx, dy);
+      }
+      else if (index == 1) {
+        // Move second vertex while keeping others fixed
+        coord2.set(x, y);
+        // Ensure minimum size
+        float dist = PVector.dist(coords, coord2);
+        if (dist < 5) {
+          float angle = atan2(y - coords.y, x - coords.x);
+          coord2.x = coords.x + 5 * cos(angle);
+          coord2.y = coords.y + 5 * sin(angle);
+        }
+      }
+      else if (index == 2) {
+        // Move third vertex while keeping others fixed
+        coord3.set(x, y);
+        // Ensure minimum size
+        float dist = PVector.dist(coords, coord3);
+        if (dist < 5) {
+          float angle = atan2(y - coords.y, x - coords.x);
+          coord3.x = coords.x + 5 * cos(angle);
+          coord3.y = coords.y + 5 * sin(angle);
+        }
+      }
     } 
     else if (type.equals("Triangle")) {
-      if (index == 1) coord2.set(x, y);
-      if (index == 2) coord3.set(x, y);
+      if (index == 1) {
+        coord2.set(x, y);
+      }
+      else if (index == 2) {
+        coord3.set(x, y);
+      }
+      else if (index == 0) {
+        // Move the entire triangle by adjusting all vertices
+        float dx = x - coords.x;
+        float dy = y - coords.y;
+        coords.add(dx, dy);
+        coord2.add(dx, dy);
+        coord3.add(dx, dy);
+      }
     }
   }
 }

@@ -198,38 +198,27 @@ class Canvas {
     if (shape.type.equals("Circle")) {
       // Draw center control point
       fill(hoveredVertex == 1 ? color(0, 200, 0) : color(0, 255, 0));
-      ellipse(shape.coords.x, shape.coords.y, 
-              hoveredVertex == 1 ? hoverSize : normalSize,
-              hoveredVertex == 1 ? hoverSize : normalSize);
+      ellipse(shape.coords.x, shape.coords.y, hoveredVertex == 1 ? hoverSize : normalSize, hoveredVertex == 1 ? hoverSize : normalSize);
               
       // Draw radius control point
       fill(hoveredVertex == 0 ? color(0, 200, 0) : color(0, 255, 0));
-      ellipse(shape.coords.x + shape.radius, shape.coords.y,
-              hoveredVertex == 0 ? hoverSize : normalSize,
-              hoveredVertex == 0 ? hoverSize : normalSize);
+      ellipse(shape.coords.x + shape.radius, shape.coords.y, hoveredVertex == 0 ? hoverSize : normalSize, hoveredVertex == 0 ? hoverSize : normalSize);
     } 
     else if (shape.type.equals("Rectangle")) {
       // Draw origin control point
       fill(hoveredVertex == 1 ? color(0, 200, 0) : color(0, 255, 0));
-      ellipse(shape.coords.x, shape.coords.y,
-              hoveredVertex == 1 ? hoverSize : normalSize,
-              hoveredVertex == 1 ? hoverSize : normalSize);
+      ellipse(shape.coords.x, shape.coords.y,hoveredVertex == 1 ? hoverSize : normalSize,  hoveredVertex == 1 ? hoverSize : normalSize);
               
       // Draw resize control point
       fill(hoveredVertex == 0 ? color(0, 200, 0) : color(0, 255, 0));
-      ellipse(shape.coords.x + shape.width, shape.coords.y + shape.height,
-              hoveredVertex == 0 ? hoverSize : normalSize,
-              hoveredVertex == 0 ? hoverSize : normalSize);
+      ellipse(shape.coords.x + shape.width, shape.coords.y + shape.height, hoveredVertex == 0 ? hoverSize : normalSize,hoveredVertex == 0 ? hoverSize : normalSize);
     } 
     else if (shape.type.equals("Triangle")) {
       // Draw all three vertices
       for (int i = 0; i < 3; i++) {
         fill(hoveredVertex == i ? color(0, 200, 0) : color(0, 255, 0));
-        PVector vertex = (i == 0) ? shape.coords : 
-                        (i == 1) ? shape.coord2 : shape.coord3;
-        ellipse(vertex.x, vertex.y,
-                hoveredVertex == i ? hoverSize : normalSize,
-                hoveredVertex == i ? hoverSize : normalSize);
+        PVector vertex = (i == 0) ? shape.coords : (i == 1) ? shape.coord2 : shape.coord3;
+        ellipse(vertex.x, vertex.y, hoveredVertex == i ? hoverSize : normalSize,hoveredVertex == i ? hoverSize : normalSize);
       }
     }
     popStyle();

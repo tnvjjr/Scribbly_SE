@@ -136,9 +136,7 @@ synchronized public void drawControlsWindow(PApplet appc, GWinData data) {
   }
 
   // handle color selection click
-  if (appc.mousePressed &&
-      appc.mouseX > startX && appc.mouseX < (startX + cols * (buttonSize + padding)) &&
-      appc.mouseY > startY && appc.mouseY < (startY + (paletteColors.length / cols + 1) * (buttonSize + padding))) {
+  if (appc.mousePressed && appc.mouseX > startX && appc.mouseX < (startX + cols * (buttonSize + padding)) &&  appc.mouseY > startY && appc.mouseY < (startY + (paletteColors.length / cols + 1) * (buttonSize + padding))) {
     int x = (appc.mouseX - startX) / (buttonSize + padding);
     int y = (appc.mouseY - startY) / (buttonSize + padding);
     int index = y * cols + x;

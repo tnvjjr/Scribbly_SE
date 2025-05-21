@@ -93,18 +93,14 @@ class Shape {
       float top = coords.y;
       float bottom = coords.y + height;
       
-      boolean nearHorizEdge = (x >= left - buffer && x <= right + buffer) &&
-                            (abs(y - top) <= buffer || abs(y - bottom) <= buffer);
-      boolean nearVertEdge = (y >= top - buffer && y <= bottom + buffer) &&
-                           (abs(x - left) <= buffer || abs(x - right) <= buffer);
+      boolean nearHorizEdge = (x >= left - buffer && x <= right + buffer) &&(abs(y - top) <= buffer || abs(y - bottom) <= buffer);
+      boolean nearVertEdge = (y >= top - buffer && y <= bottom + buffer) && (abs(x - left) <= buffer || abs(x - right) <= buffer);
       
       return nearHorizEdge || nearVertEdge;
     } 
     else if (type.equals("Triangle")) {
       // Check if point is near any vertex or edge
-      boolean nearVertex = PVector.dist(coords, mouse) < buffer ||
-                         PVector.dist(coord2, mouse) < buffer || 
-                         PVector.dist(coord3, mouse) < buffer;
+      boolean nearVertex = PVector.dist(coords, mouse) < buffer ||   PVector.dist(coord2, mouse) < buffer ||  PVector.dist(coord3, mouse) < buffer;
                          
       // Check if point is near any edge using point-to-line distance
       float d1 = pointToLineDistance(mouse, coords, coord2);

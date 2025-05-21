@@ -1,5 +1,6 @@
 class Canvas {
   PGraphics canvas;
+  boolean isFirstDraw = true;  // Add this line to track first draw
 
   int strokeSize;
   boolean isEraserActive;
@@ -11,29 +12,39 @@ class Canvas {
   boolean isDrawing;
   PVector startPoint;
   Shape selectedShape;
+  String currentTool;
 
   int vertexIndex = -1;
   boolean isDragging = false;
 
   ArrayList<Shape> finalizedShapes = new ArrayList<Shape>();
+  PVector lastPoint;
+  boolean isDrawingPen;
 
   // initialize canvas settings
   Canvas(int width, int height) {
-    canvas = createGraphics(width, height);
+    canvas = createGraphics(width, height, JAVA2D);
+    canvas.smooth();
     strokeSize = 3;
     eraserStrokeSize = 20;
     isEraserActive = false;
     colors = new Colors();
     currentShape = "Rectangle";
+    currentTool = "Pen";  // Initialize with Pen tool
     isDrawing = false;
     selectedShape = null;
     clear();
   }
-
+  
   // runs each frame to update canvas
   void draw() {
     canvas.beginDraw();
-    canvas.background(255);
+    
+    // Only clear on initialization or explicit clear
+    if (isFirstDraw) {
+      canvas.background(255);
+      isFirstDraw = false;
+    }
 
     // draw all saved shapes
     for (Shape s : finalizedShapes) {
@@ -53,58 +64,100 @@ class Canvas {
 
     // draw while mouse is pressed
     if (mousePressed && mouseY > 0) {
-      if (isEraserActive) {
+      if (currentTool.equals("Eraser")) {
+        // Remove shapes that intersect with eraser
+        for (int i = finalizedShapes.size() - 1; i >= 0; i--) {
+          Shape s = finalizedShapes.get(i);
+          if (s.contains(mouseX, mouseY)) {
+            finalizedShapes.remove(i);
+          }
+        }
+        // Erase pixels
         canvas.noStroke();
         canvas.fill(255);
         canvas.ellipse(mouseX, mouseY, eraserStrokeSize, eraserStrokeSize);
-      } else {
+      }
+      
+      if (currentTool.equals("Pen")) {
+        if (!isDrawingPen) {
+          lastPoint = new PVector(mouseX, mouseY);
+          isDrawingPen = true;
+        }
+        canvas.stroke(colors.getPenColor());
+        canvas.strokeWeight(strokeSize);
+        canvas.line(lastPoint.x, lastPoint.y, mouseX, mouseY);
+        lastPoint.set(mouseX, mouseY);
+      }
+      
+      if (currentTool.equals("Shape")) {
         if (!isDrawing) {
           startPoint = new PVector(mouseX, mouseY);
           isDrawing = true;
         }
 
-        PVector currentPoint = new PVector(mouseX, mouseY);
-        float distance = PVector.dist(startPoint, currentPoint);
-
-        currentShapeInstance = new Shape(startPoint.x, startPoint.y, colors.getPenColor(), strokeSize, colors.getPenColor(), currentShape);
-
-        // shape setup logic
-        switch (currentShape) {
-          case "Circle":
-            currentShapeInstance.setRadius(distance);
-            break;
-          case "Rectangle":
-            float topLeftX = min(startPoint.x, currentPoint.x);
-            float topLeftY = min(startPoint.y, currentPoint.y);
-            float rectWidth = abs(currentPoint.x - startPoint.x);
-            float rectHeight = abs(currentPoint.y - startPoint.y);
-            currentShapeInstance.coords.set(topLeftX, topLeftY);
-            currentShapeInstance.setRectangleDimensions(rectWidth, rectHeight);
-            break;
-          case "Triangle":
-            float halfSize = distance;
-            currentShapeInstance.setTriangleCoordinates(
-              startPoint.x - halfSize, startPoint.y + halfSize,
-              startPoint.x + halfSize, startPoint.y + halfSize
-            );
-            break;
+        if (currentShapeInstance == null) {
+          // Always start shape at initial click point
+          currentShapeInstance = new Shape(startPoint.x, startPoint.y, colors.getPenColor(), strokeSize, colors.getPenColor(), currentShape);
         }
 
+        if (currentShape.equals("Rectangle")) {
+          // For rectangles, calculate the top-left and dimensions based on drag direction
+          float left = min(startPoint.x, mouseX);
+          float top = min(startPoint.y, mouseY);
+          currentShapeInstance.coords.x = left;
+          currentShapeInstance.coords.y = top;
+          currentShapeInstance.width = abs(mouseX - startPoint.x);
+          currentShapeInstance.height = abs(mouseY - startPoint.y);
+        } else if (currentShape.equals("Triangle")) {
+          // For triangles, create an isosceles triangle that follows the mouse
+          float dx = mouseX - startPoint.x;
+          float dy = mouseY - startPoint.y;
+          float distance = sqrt(dx*dx + dy*dy);
+          float angle = atan2(dy, dx);
+          
+          // Base point (coord2) follows the mouse directly
+          currentShapeInstance.coord2.x = mouseX;
+          currentShapeInstance.coord2.y = mouseY;
+          
+          // Third point (coord3) creates an isosceles triangle
+          float triangleAngle = PI/3; // 60 degrees for equilateral
+          currentShapeInstance.coord3.x = startPoint.x + distance * cos(angle + triangleAngle);
+          currentShapeInstance.coord3.y = startPoint.y + distance * sin(angle + triangleAngle);
+        } else {
+          // For other shapes (circle), use normal vertex adjustment
+          currentShapeInstance.adjustVertex(0, mouseX, mouseY);
+        }
         drawShapePreview(currentShapeInstance);
       }
-    } else if (isDrawing) {
-      if (currentShapeInstance != null) {
+    } else {
+      if (currentShapeInstance != null && isDrawing) {
         finalizedShapes.add(currentShapeInstance);
+        isDrawing = false;
+        currentShapeInstance = null;
       }
-      isDrawing = false;
-      currentShapeInstance = null;
+      if (isDrawingPen) {
+        isDrawingPen = false;
+      }
     }
 
     canvas.endDraw();
     image(canvas, 0, 0);
 
-    if (isEraserActive) {
+    if (currentTool.equals("Eraser")) {
       drawEraserPreview();
+    }
+    
+    if (currentTool.equals("Pen")) {
+      pushStyle();
+      stroke(100);
+      strokeWeight(1);
+      fill(colors.getPenColor());
+      ellipse(mouseX, mouseY, strokeSize, strokeSize);
+      popStyle();
+    }
+    
+    if (currentTool.equals("Shape") && currentShapeInstance != null) {
+      drawShapePreview(currentShapeInstance);
     }
   }
 
@@ -121,27 +174,64 @@ class Canvas {
   // shows shape preview on screen
   void drawShapePreview(Shape shape) {
     pushStyle();
-    shape.draw(null);
+    smooth(8);  // Match the anti-aliasing level
+    hint(ENABLE_STROKE_PURE);
+    strokeCap(ROUND);
+    strokeJoin(ROUND);
+    stroke(shape.borderColor);
+    strokeWeight(shape.borderWidth);
+    noFill();
+    shape.draw(null);  // Use the Shape class's draw method
     popStyle();
   }
 
   // draws shape vertices for editing
   void drawVertices(Shape shape) {
     pushStyle();
-    fill(0, 255, 0);
-    noStroke();
-
+    stroke(100);
+    strokeWeight(1);
+    
+    int hoveredVertex = shape.getVertexIndex(mouseX, mouseY);
+    float normalSize = 8;
+    float hoverSize = 12;
+    
     if (shape.type.equals("Circle")) {
-      ellipse(shape.coords.x + shape.radius, shape.coords.y, 10, 10);
+      // Draw center control point
+      fill(hoveredVertex == 1 ? color(0, 200, 0) : color(0, 255, 0));
+      ellipse(shape.coords.x, shape.coords.y, 
+              hoveredVertex == 1 ? hoverSize : normalSize,
+              hoveredVertex == 1 ? hoverSize : normalSize);
+              
+      // Draw radius control point
+      fill(hoveredVertex == 0 ? color(0, 200, 0) : color(0, 255, 0));
+      ellipse(shape.coords.x + shape.radius, shape.coords.y,
+              hoveredVertex == 0 ? hoverSize : normalSize,
+              hoveredVertex == 0 ? hoverSize : normalSize);
     } 
     else if (shape.type.equals("Rectangle")) {
-      rect(shape.coords.x + shape.width, shape.coords.y + shape.height, 10, 10);
+      // Draw origin control point
+      fill(hoveredVertex == 1 ? color(0, 200, 0) : color(0, 255, 0));
+      ellipse(shape.coords.x, shape.coords.y,
+              hoveredVertex == 1 ? hoverSize : normalSize,
+              hoveredVertex == 1 ? hoverSize : normalSize);
+              
+      // Draw resize control point
+      fill(hoveredVertex == 0 ? color(0, 200, 0) : color(0, 255, 0));
+      ellipse(shape.coords.x + shape.width, shape.coords.y + shape.height,
+              hoveredVertex == 0 ? hoverSize : normalSize,
+              hoveredVertex == 0 ? hoverSize : normalSize);
     } 
     else if (shape.type.equals("Triangle")) {
-      ellipse(shape.coord2.x, shape.coord2.y, 10, 10);
-      ellipse(shape.coord3.x, shape.coord3.y, 10, 10);
+      // Draw all three vertices
+      for (int i = 0; i < 3; i++) {
+        fill(hoveredVertex == i ? color(0, 200, 0) : color(0, 255, 0));
+        PVector vertex = (i == 0) ? shape.coords : 
+                        (i == 1) ? shape.coord2 : shape.coord3;
+        ellipse(vertex.x, vertex.y,
+                hoveredVertex == i ? hoverSize : normalSize,
+                hoveredVertex == i ? hoverSize : normalSize);
+      }
     }
-
     popStyle();
   }
 
@@ -207,6 +297,7 @@ class Canvas {
     canvas.beginDraw();
     canvas.background(255);
     canvas.endDraw();
+    isFirstDraw = true;  // Reset first draw flag when clearing
   }
 
   // saves canvas as png file
@@ -220,6 +311,11 @@ class Canvas {
     String filepath = "screenshots/" + (filename != null ? filename : "drawing_") + timestamp + ".png";
     canvas.save(filepath);
     println("Canvas saved as: " + filepath);
+  }
+
+  // updates current tool
+  void setCurrentTool(String tool) {
+    currentTool = tool;
   }
 
   // gets color manager

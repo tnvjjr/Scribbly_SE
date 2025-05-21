@@ -2,12 +2,13 @@ GWindow controlsWindow;
 GSlider redSlider, greenSlider, blueSlider, penSizeSlider;
 GButton setColorButton;
 GButton saveButton;
+GTextField filenameField;
 GSlider eraserSizeSlider;
 GDropList toolDropList;
 
 // sets up the GUI control window
 public void createGUI() {
-  controlsWindow = GWindow.getWindow(this, "Paint Controls", 0, 0, 360, 400, JAVA2D);
+  controlsWindow = GWindow.getWindow(this, "Paint Controls", 0, 0, 360, 450, JAVA2D);
   controlsWindow.setActionOnClose(G4P.KEEP_OPEN);
   controlsWindow.addDrawHandler(this, "drawControlsWindow");
 
@@ -94,8 +95,16 @@ public void createGUI() {
   eraserSizeSlider.setOpaque(true);
   eraserSizeSlider.setTextOrientation(G4P.ORIENT_LEFT);
 
+  // filename text field
+  GLabel filenameLabel = new GLabel(controlsWindow, 10, 360, 100, 20);
+  filenameLabel.setText("Filename:");
+  filenameLabel.setOpaque(false);
+  
+  filenameField = new GTextField(controlsWindow, 10, 380, 340, 25);
+  filenameField.setPromptText("Enter filename (without .png)");
+
   // save button
-  saveButton = new GButton(controlsWindow, 220, 360, 120, 30);
+  saveButton = new GButton(controlsWindow, 10, 410, 340, 30);
   saveButton.setText("Save Canvas");
   saveButton.addEventHandler(this, "handleSaveCanvas");
 }
@@ -167,7 +176,13 @@ public void handleSetPenColor(GButton button, GEvent event) {
 // saves canvas to file
 public void handleSaveCanvas(GButton button, GEvent event) {
   if (button == saveButton && event == GEvent.CLICKED) {
-    canvas.save(null);
+    String filename = filenameField.getText();
+    if (filename != null && !filename.trim().isEmpty()) {
+      canvas.save(filename);
+      filenameField.setText(""); // Clear the field after saving
+    } else {
+      canvas.save(null);
+    }
   }
 }
 

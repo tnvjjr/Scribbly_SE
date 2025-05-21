@@ -307,8 +307,7 @@ class Canvas {
       dir.mkdir();
     }
 
-    String timestamp = year() + "-" + nf(month(), 2) + "-" + nf(day(), 2) + "_" + nf(hour(), 2) + "-" + nf(minute(), 2) + "-" + nf(second(), 2);
-    String filepath = "screenshots/" + (filename != null ? filename : "drawing_") + timestamp + ".png";
+    String filepath = "screenshots/" + (filename != null ? filename : "drawing") + ".png";
     canvas.save(filepath);
     println("Canvas saved as: " + filepath);
   }
